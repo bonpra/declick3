@@ -1,10 +1,10 @@
 {
-  "name": "delick-runtime",
+  "name": "declick-runtime",
   "version": "0.0.1",
   "description": "Declick Runtime",
   "main": "lib/declick-runtime.js",
   "scripts": {
-    "build": "webpack --env dev && webpack --env build && npm run test",
+    "build": "webpack --env dev && webpack --env build",
     "dev": "webpack --progress --colors --watch --env dev",
     "test": "mocha --require babel-register --colors ./test/*.spec.js",
     "test:watch": "mocha --require babel-register --colors -w ./test/*.spec.js"
@@ -44,5 +44,9 @@
     "webpack": "^4.12.2",
     "webpack-cli": "^3.0.8",
     "yargs": "^10.0.3"
+  },
+  "dependencies": {
+    "acorn": "^5.7.1",
+    "js-interpreter": "^1.4.6"
   }
 }
