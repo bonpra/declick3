@@ -1,26 +1,15 @@
-import Interpreter from './interpreter';
-import parser from './parser';
-// TODO: ajouter error
-import DeclickError from './error';
-
-const MAX_STEP = 100;
-
 // Private properties
 
 //let _log = null;
-let _errorHandler = null;
 let _classes = {};
 let _translatedClasses = {};
 let _instances = {};
 let _stored = {};
-let _stepCount = 0;
 let _interpreter = null;
-let _running = false;
-let _priorityStatementsAllowed = true;
 
 // Private methods
 
-let _getNativeData = function(data) {
+let _toNativeData = function(data) {
   let result;
   if (data.type) {
     if (data.type === 'function') {
@@ -33,13 +22,13 @@ let _getNativeData = function(data) {
         // we are in an array
         result = [];
         for (let i = 0; i < data.length; i++) {
-          result.push(_getNativeData(data.properties[i]));
+          result.push(_toNativeData(data.properties[i]));
         }
         return result;
       }
       result = {};
       for (let member in data.properties) {
-        result[member] = _getNativeData(data.properties[member]);
+        result[member] = _toNativeData(data.properties[member]);
       }
       return result;
     }
@@ -47,13 +36,13 @@ let _getNativeData = function(data) {
   return data;
 };
 
-let _getInterpreterData = function(data) {
+let _toInterpreterData = function(data) {
   let result;
   if (data instanceof Array) {
     // Array
     result = _interpreter.createObject(_interpreter.ARRAY);
     for (let i = 0; i < data.length;i++) {
-      _interpreter.setProperty(result, i, _getInterpreterData(data[i]));
+      _interpreter.setProperty(result, i, _toInterpreterData(data[i]));
     }
     return result;
   } else if (typeof data === 'object') {
@@ -78,9 +67,9 @@ let _getClassMethodWrapper = function(className, methodName) {
     // transform data from interpreter into actual data
     let args = [];
     for (let i = 0; i < arguments.length;i++) {
-      args.push(_getNativeData(arguments[i]));
+      args.push(_toNativeData(arguments[i]));
     }
-    return _getInterpreterData(_classes[className].prototype[methodName].apply(this.data, args));
+    return _toInterpreterData(_classes[className].prototype[methodName].apply(this.data, args));
   };
 };
 
@@ -101,9 +90,9 @@ let _getInstanceMethodWrapper = function(className, methodName) {
     // transform data from interpreter into actual data
     let args = [];
     for (let i = 0 ; i < arguments.length ; i++) {
-      args.push(_getNativeData(arguments[i]));
+      args.push(_toNativeData(arguments[i]));
     }
-    return _getInterpreterData(_instances[className][methodName].apply(this.data, args));
+    return _toInterpreterData(_instances[className][methodName].apply(this.data, args));
   };
 };
 
@@ -136,111 +125,19 @@ let _getObject = function(name) {
   return _interpreter.createNativeFunction(wrapper);
 };
 
-let _stop = function(scope) {
-  _running = false;
-  let emptyAST = parser.parse('');
-  if (!scope) {
-    scope = _interpreter.createScope(emptyAST, null);
-  }
-  _interpreter.stateStack = [{
-    node: emptyAST,
-    scope: scope,
-    thisExpression: scope,
-    done: false
-  }];
-  _interpreter.paused_ = false;
-  _priorityStatementsAllowed = true;
-};
-
-let _clear = function() {
-  _stop();
-};
-
 /*let _logCommand = function(command) {
   if (typeof _log !== 'undefined') {
     _log.addCommand(command);
   }
 };*/
 
-let _nextStep = function() {
-  try {
-    if (_interpreter.step()) {
-      _stepCount++;
-      if (!_interpreter.paused_) {
-        if (_stepCount >= MAX_STEP) {
-          _stepCount = 0;
-          window.setTimeout(_nextStep, 0);
-        } else {
-          _nextStep();
-        }
-      }
-    } else {
-      _running = false;
-    }
-    // _logCommand(_interpreter.stateStack);
-  } catch (err) {
-    let state, error;
-    if (!(err instanceof DeclickError)) {
-      error = new DeclickError(err);
-      if (_interpreter.stateStack.length > 0) {
-        state = _interpreter.stateStack[0];
-        if (state.node.loc) {
-          error.setLines([state.node.loc.start.line, state.node.loc.end.line]);
-        }
-      }
-      error.detectError();
-    } else {
-      error = err;
-    }
-    if (_interpreter.stateStack.length > 0) {
-      state = _interpreter.stateStack[0];
-      if (!state.node.loc || !state.node.loc.source) {
-        // no program associated: remove lines if any
-        error.setLines([]);
-      } else {
-        error.setProgramName(state.node.loc.source);
-      }
-    }
-    let baseState = _interpreter.stateStack.pop();
-    _stop(baseState.scope);
+let data = {
 
-    if (typeof _errorHandler !== 'undefined') {
-      _errorHandler(error);
-    } else {
-      throw error;
-    }
-  }
-};
+  initialize(interpreter) {
 
-let _run = function() {
-  _running = true;
-  _nextStep();
-};
+    _interpreter = interpreter;
 
-let _start = function() {
-  if (!_running) {
-    _stepCount = 0;
-    _run();
-  }
-};
-
-let Runtime = {
-
-  convertToNative(data) {
-    return _getNativeData(data);
-  },
-
-  /*setLog(element) {
-    _log = element;
-  },*/
-
-  setErrorHandler(handler) {
-    _errorHandler = handler;
-  },
-
-  initialize() {
-
-    _interpreter = new Interpreter('', (interpreter, scope) => {
+    /*_interpreter = new Interpreter('', (interpreter, scope) => {
       // #1 Declare translated Instances
       for (let name in _instances) {
         let object;
@@ -266,76 +163,16 @@ let Runtime = {
         }
         _interpreter.setProperty(scope, name, object, true);
       }
-    });
+    });*/
 
   },
 
-  // LIFECYCLE MANAGEMENT
-
-  start() {
-    _start();
+  toInterpreterData(data) {
+    return _toInterpreterData(data);
   },
 
-  interrupt() {
-    _interpreter.stateStack.shift();
-    _interpreter.stateStack.unshift({node:{type: 'InterruptStatement'}, priority:true, done:false});
-  },
-
-  clear() {
-    _clear();
-  },
-
-  suspend() {
-    _interpreter.paused_ = true;
-  },
-
-  resume() {
-    if (_interpreter.paused_) {
-      _interpreter.paused_ = false;
-      _run();
-    }
-  },
-
-  stop() {
-    _stop();
-  },
-
-  // STATEMENTS MANAGEMENT
-
-  addStatement(statement) {
-    _interpreter.appendCode(statement);
-    _start();
-  },
-
-  addStatements(statements) {
-    _interpreter.appendCode(statements);
-    _start();
-  },
-
-  insertStatement(statement, parameters) {
-    _interpreter.insertCode(statement, true, parameters);
-    _start();
-  },
-
-  insertStatements(statements) {
-    _interpreter.insertBlock(statements, false);
-    _start();
-  },
-
-  addPriorityStatements(statements, parameters, log, callback) {
-    if (_priorityStatementsAllowed) {
-      if (typeof parameters !== 'undefined') {
-        for (let i = 0; i < parameters.length; i++) {
-          parameters[i] = _getInterpreterData(parameters[i]);
-        }
-      }
-      if (typeof callback !== 'undefined') {
-        _interpreter.insertCode(statements, true, parameters, this.createCallbackStatement(callback));
-      } else {
-        _interpreter.insertCode(statements, true, parameters);
-      }
-      _start();
-    }
+  toNativeData(data) {
+    return _toNativeData(data);
   },
 
   addClass(func, name) {
@@ -356,7 +193,7 @@ let Runtime = {
     return null;
   },
 
-  getObject(name) {
+  findInterpreterObject(name) {
     try {
       let obj = _interpreter.getValueFromScope(name);
       if (obj && obj.data) {
@@ -368,7 +205,7 @@ let Runtime = {
     }
   },
 
-  getObjectName(reference) {
+  findInterpreterObjectName(reference) {
     let scope = _interpreter.getScope();
     while (scope) {
       for (let name in scope.properties) {
@@ -382,7 +219,7 @@ let Runtime = {
     return null;
   },
 
-  deleteObject(reference) {
+  deleteInterpreterObject(reference) {
     let scope = _interpreter.getScope();
     while (scope) {
       for (let name in scope.properties) {
@@ -402,7 +239,7 @@ let Runtime = {
   exposeProperty(reference, property, propertyName) {
     let scope = _interpreter.getScope();
     let wrapper = function() {
-      return _getInterpreterData(this.data[property]);
+      return _toInterpreterData(this.data[property]);
     };
     while (scope) {
       for (let name in scope.properties) {
@@ -417,31 +254,14 @@ let Runtime = {
       scope = scope.parentScope;
     }
     return false;
-  },
-
-  createCallStatement(functionStatement) {
-    return _interpreter.createCallStatement(functionStatement);
-  },
-
-  createFunctionStatement(functionStatement) {
-    return _interpreter.createFunctionStatement(functionStatement);
-  },
-
-  allowPriorityStatements() {
-    _priorityStatementsAllowed = true;
-  },
-
-  refusePriorityStatements() {
-    _priorityStatementsAllowed = false;
   }
-
 };
 
-// TODO: à comprendre
-Object.defineProperty(Runtime, 'output', {
+// TODO: à bouger et à comprendre
+Object.defineProperty(data, 'output', {
   get() {
     return _interpreter.value;
   }
 });
 
-export default Runtime;
+export default data;
