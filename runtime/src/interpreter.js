@@ -105,18 +105,33 @@ export default class extends JSInterpreter {
   // add support for inner call
   stepInnerCallExpression() {
     let state = this.stateStack.pop();
-    let args = state.parameters ? state.parameters : [];
+    let args = state.parameters ? state.parameters : state.node.parameters ? state.node.parameters : [];
     this.stateStack.push({node: {type:'CallExpression', arguments:args}, arguments_:[], n_:0, doneCallee_: true, func_: state.node.func_, funcThis_: this.stateStack[0].thisExpression});
   }
 
-  // TODO: priorité à gérer plus haut (cf. exemple multi-thread)
+  // TODO: voir si on ne peut pas plutôt créer le callbackStatement depuis un callback
+  appendStatements(statements, parameters, callbackStatement) {
+    let body = [];
+    for (let i = statements.length - 1; i >= 0; i--) {
+      let node = statements[i];
+      if (node.type === 'InnerCallExpression' && parameters != null) {
+        node.parameters = parameters;
+      }
+      body.push(node);
+    }
+    if (callbackStatement != null) {
+      body.push(callbackStatement);
+    }
+    this.appendCode({type:'Program', body:body});
+  }
+
+  //TODO: voir si on s'en sert
   insertBlock(block) {
     // Append the new statements
     block.type = 'BlockStatement';
     this.stateStack.push({node: block, done:false});
   }
 
-  // TODO: priorité à gérer plus haut (cf. exemple multi-thread)
   // add ability to insert code
   insertStatements(statements, parameters, callbackStatement) {
     // Append the new statements
@@ -159,6 +174,11 @@ export default class extends JSInterpreter {
         let prop = obj.properties[name];
         if (prop.dynamic) {
           return prop.dynamic.apply(obj);
+        }
+        let getter = obj.getter[name];
+        if (getter) {
+          getter.isGetter = true;
+          return getter;
         }
         return prop;
       }
@@ -242,7 +262,7 @@ export default class extends JSInterpreter {
   }
 
   createCallStatement(functionStatement) {
-    return [{type: 'InnerCallExpression', arguments: [], func_: functionStatement, loc: functionStatement.node.loc}];
+    return {type: 'InnerCallExpression', arguments: [], func_: functionStatement, loc: functionStatement.node.loc};
   }
 
   createCallbackStatement(callback) {
@@ -258,4 +278,15 @@ export default class extends JSInterpreter {
     return statement;
   }
 
+  getGlobalScope() {
+    return this.global;
+  }
+
+  setGlobalScope(aScope) {
+    this.stateStack[0].scope = aScope;
+  }
+
+  getLastValue() {
+    return this.value;
+  }
 };
