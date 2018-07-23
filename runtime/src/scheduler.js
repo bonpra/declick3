@@ -17,12 +17,14 @@ let _priorityStep = false;
 
 let _nextStep = function() {
   try {
-    _priorityStep = false;
-    let step = _priorityInterpreter.step();
-    if (step) {
+    let step = false;
+    if (_priorityInterpreter.step()) {
       _priorityStep = true;
-    } else {
-      step = _interpreter.step();
+      step = true;
+    }
+    if (!step && _interpreter.step()) {
+      step = true;
+      _priorityStep = false;
     }
     if (step) {
       _stepCount++;
@@ -98,16 +100,12 @@ let _clear = function() {
 };
 
 let _appendStatements = function(interpreter, statements, parameters, callback) {
-  if (typeof parameters !== 'undefined') {
+  if (parameters != null) {
     for (let i = 0; i < parameters.length; i++) {
       parameters[i] = data.toInterpreterData(parameters[i]);
     }
   }
-  if (callback != null) {
-    interpreter.appendStatements(statements, parameters, interpreter.createCallbackStatement(callback));
-  } else {
-    interpreter.appendStatements(statements, parameters);
-  }
+  interpreter.appendStatements(statements, parameters, callback);
 };
 
 let _insertStatements = function(interpreter, statements, parameters, callback) {
@@ -116,11 +114,7 @@ let _insertStatements = function(interpreter, statements, parameters, callback) 
       parameters[i] = data.toInterpreterData(parameters[i]);
     }
   }
-  if (callback != null) {
-    interpreter.insertStatements(statements, parameters, interpreter.createCallbackStatement(callback));
-  } else {
-    interpreter.insertStatements(statements, parameters);
-  }
+  interpreter.insertStatements(statements, parameters, callback);
 };
 
 export default {
@@ -168,12 +162,10 @@ export default {
   // STATEMENTS MANAGEMENT
 
   addStatements(statements, parameters, callback) {
-    if (isArray(statements)) {
-      _appendStatements(_interpreter, parameters, callback);
-    } else {
-      // TODO: voir si on a besoin de gérer paramètres et callback dans ce cas
-      _interpreter.appendCode(statements);
+    if (!isArray(statements)) {
+      statements = statements.body;
     }
+    _appendStatements(_interpreter, statements, parameters, callback);
     _start();
   },
 
@@ -187,12 +179,10 @@ export default {
 
   addPriorityStatements(statements, parameters, callback) {
     if (_priorityStatementsAllowed) {
-      if (isArray(statements)) {
-        _appendStatements(_priorityInterpreter, parameters, callback);
-      } else {
-        // TODO: voir si on a besoin de gérer les paramètres et le callback dans ce cas
-        _priorityInterpreter.appendCode(statements);
+      if (!isArray(statements)) {
+        statements = statements.body;
       }
+      _appendStatements(_priorityInterpreter, statements, parameters, callback);
       _start();
     }
   },

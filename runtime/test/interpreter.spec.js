@@ -168,11 +168,11 @@ describe('Given an instance of Interpreter', () => {
     interpreter.appendCode(ast1);
     let called = false;
     let result = 0;
-    let callbackStatement = interpreter.createCallbackStatement(() => {
+    let callback = () => {
       called = true;
       result = interpreter.getLastValue().data;
-    });
-    interpreter.appendStatements(ast2.body, null, callbackStatement);
+    };
+    interpreter.appendStatements(ast2.body, null, callback);
     interpreter.appendCode(ast3);
     interpreter.run();
     assert.equal(called, true);

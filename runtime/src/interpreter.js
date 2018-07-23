@@ -110,18 +110,15 @@ export default class extends JSInterpreter {
     this.stateStack.push({node: {type:'CallExpression', arguments:args}, arguments_:[], n_:0, doneCallee_: true, func_: state.node.func_, funcThis_: this.stateStack[0].thisExpression});
   }
 
-  // TODO: voir si on ne peut pas plutôt créer le callbackStatement depuis un callback
-  appendStatements(statements, parameters, callbackStatement) {
-    let body = [];
-    for (let i = statements.length - 1; i >= 0; i--) {
-      let node = statements[i];
-      if (node.type === 'InnerCallExpression' && parameters != null) {
-        node.parameters = parameters;
+  appendStatements(statements, parameters, callback) {
+    let body = statements.map((statement) => {
+      if (statement.type === 'InnerCallExpression' && parameters != null) {
+        statement.parameters = parameters;
       }
-      body.push(node);
-    }
-    if (callbackStatement != null) {
-      body.push(callbackStatement);
+      return statement;
+    });
+    if (callback != null) {
+      body.push(this.createCallbackStatement(callback));
     }
     this.appendCode({type:'Program', body:body});
   }
@@ -134,10 +131,10 @@ export default class extends JSInterpreter {
   }
 
   // add ability to insert code
-  insertStatements(statements, parameters, callbackStatement) {
+  insertStatements(statements, parameters, callback) {
     // Append the new statements
-    if (typeof callbackStatement !== 'undefined') {
-      this.stateStack.push({node: callbackStatement, done:false});
+    if (callback !== null) {
+      this.stateStack.push({node: this.createCallbackStatement(callback), done:false});
     }
     for (let i = statements.length - 1; i >= 0; i--) {
       let node = statements[i];
@@ -262,12 +259,12 @@ export default class extends JSInterpreter {
     }
   }
 
-  createCallStatement(functionStatement) {
-    return {type: 'InnerCallExpression', arguments: [], func_: functionStatement, loc: functionStatement.node.loc};
-  }
-
   createCallbackStatement(callback) {
     return {type: 'CallbackStatement', callback: callback};
+  }
+
+  createCallStatement(functionStatement) {
+    return {type: 'InnerCallExpression', arguments: [], func_: functionStatement, loc: functionStatement.node.loc};
   }
 
   createFunctionStatement(body, parameters) {
