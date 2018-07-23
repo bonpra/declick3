@@ -1,3 +1,4 @@
+import parser from './parser';
 import JSInterpreter from 'js-interpreter';
 
 export default class extends JSInterpreter {
@@ -288,5 +289,40 @@ export default class extends JSInterpreter {
 
   getLastValue() {
     return this.value;
+  }
+
+  reset(scope) {
+    let emptyAST = parser.parse('');
+    if (scope == null) {
+      this.polyfills_ = [];
+      scope = this.createScope(emptyAST, null);
+      this.global = scope;
+      this.NAN.parent = this.NUMBER;
+      this.TRUE.parent = this.BOOLEAN;
+      this.FALSE.parent = this.BOOLEAN;
+      this.NUMBER_ZERO.parent = this.NUMBER;
+      this.NUMBER_ONE.parent = this.NUMBER;
+      this.STRING_EMPTY.parent = this.STRING;
+      // Run the polyfills.
+      this.ast = parser.parse(this.polyfills_.join('\n'), this.PARSE_OPTIONS);
+      this.polyfills_ = undefined; // Allow polyfill strings to garbage collect.
+      this.stripLocations_(this.ast, undefined, undefined);
+      this.stateStack = [{
+        node: this.ast,
+        scope: this.global,
+        thisExpression: this.global,
+        done: false
+      }];
+      this.run();
+      this.value = this.UNDEFINED;
+    }
+    this.ast = emptyAST;
+    this.global = scope;
+    this.stateStack = [{
+      node: emptyAST,
+      scope: this.global,
+      thisExpression: this.global,
+      done: false
+    }];
   }
 };

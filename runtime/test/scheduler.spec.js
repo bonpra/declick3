@@ -4,11 +4,10 @@ import scheduler from '../src/scheduler';
 
 describe('When adding statements', () => {
 
-  let interpreter;
+  let interpreter = scheduler.initialize();
 
   before(()=> {
-    interpreter = scheduler.initialize();
-    //scheduler.clear();
+    scheduler.clear();
   });
 
   it('should execute added statements in right order', () => {

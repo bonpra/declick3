@@ -1,4 +1,3 @@
-import parser from './parser';
 import Interpreter from './interpreter';
 import data from './data';
 import {isArray} from 'lodash';
@@ -15,7 +14,6 @@ let _priorityStatementsAllowed = true;
 let _interpreter = null;
 let _priorityInterpreter = null;
 let _priorityStep = false;
-const emptyAST = parser.parse('');
 
 let _nextStep = function() {
   try {
@@ -88,22 +86,8 @@ let _start = function() {
 
 let _stop = function(scope) {
   _running = false;
-  if (!scope) {
-    // TODO: find a way to clear scope, since polyfill_ is set to undefined
-    scope = _interpreter.createScope(emptyAST, null);
-  }
-  _interpreter.stateStack = [{
-    node: emptyAST,
-    scope: scope,
-    thisExpression: scope,
-    done: false
-  }];
-  _priorityInterpreter.stateStack = [{
-    node: emptyAST,
-    scope: scope,
-    thisExpression: scope,
-    done: false
-  }];
+  _interpreter.reset(scope);
+  _priorityInterpreter.reset(_interpreter.getGlobalScope());
   _interpreter.paused_ = false;
   _priorityInterpreter.paused_ = false;
   _priorityStatementsAllowed = true;
