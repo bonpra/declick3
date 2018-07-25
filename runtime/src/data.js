@@ -7,7 +7,7 @@ let _classes = {};
 let _exposedClasses = {};
 let _instances = {};
 let _interpreter = null;
-let stored = false;
+let _stored = false;
 
 // Private methods
 
@@ -74,26 +74,28 @@ let _getMethodWrapper = function(interpreter, method) {
   };
 };
 
-let _toInterpreterClass = function(interpreter, aClass) {
+let _toInterpreterClass = function(interpreter, AClass) {
   // 1st prototype
   let interpreterClass = interpreter.createObject(interpreter.FUNCTION);
-  if (aClass.prototype != null && aClass.prototype.exposedMethods != null) {
-    forIn(aClass.prototype.exposedMethods, (exposedName, methodName) => {
-      interpreter.setProperty(interpreterClass.properties.prototype, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, aClass.prototype[methodName])));
+  if (AClass.prototype != null && AClass.prototype.exposedMethods != null) {
+    forIn(AClass.prototype.exposedMethods, (exposedName, methodName) => {
+      interpreter.setProperty(interpreterClass.properties.prototype, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, AClass.prototype[methodName])));
     });
   }
   // 2nd constructor
   let constructor = function() {
-    let instance = _interpreter.createObject(interpreterClass);
-    let declickObject = Object.create(aClass);
+    let instance = interpreter.createObject(interpreterClass);
     let args = [...arguments].map((argument) => {
       return _toNativeData(argument);
     });
-    aClass.apply(declickObject, args);
+    //TODO: voir si on peut définitivement oublier la version function:
+    //let declickObject = Object.create(AClass);
+    //AClass.apply(declickObject, args);
+    let declickObject = new AClass(...args);
     instance.data = declickObject;
     return instance;
   };
-  return _interpreter.createNativeFunction(constructor);
+  return interpreter.createNativeFunction(constructor);
 };
 
 let _toInterpreterInstance = function(interpreter, instance) {
@@ -119,7 +121,7 @@ let data = {
     _interpreter = new Interpreter('', (interpreter, scope) => {
 
       // at first launch, create and store interpreter instances and classes
-      if (!stored) {
+      if (!_stored) {
         forIn(_instances, (instance, name) => {
           _instances[name] = _toInterpreterInstance(interpreter, instance);
         });
@@ -129,7 +131,7 @@ let data = {
             _exposedClasses[aClass.className] = name;
           }
         });
-        stored = true;
+        _stored = true;
       }
 
       // #1 Declare instances
@@ -137,7 +139,7 @@ let data = {
         interpreter.setProperty(scope, name, instance, {writable:false});
       });
 
-      // #2 Declare translated Classes
+      // #2 Declare classes
       forIn(_classes, (aClass, name) => {
         interpreter.setProperty(scope, name, aClass, {writable:false});
       });
@@ -230,14 +232,22 @@ let data = {
       scope = scope.parentScope;
     }
     return false;
+  },
+
+  reset() {
+    _classes = {};
+    _exposedClasses = {};
+    _instances = {};
+    _interpreter = null;
+    _stored = false;
   }
 };
 
 // TODO: à bouger et à comprendre
-Object.defineProperty(data, 'output', {
+/*Object.defineProperty(data, 'output', {
   get() {
     return _interpreter.value;
   }
-});
+});*/
 
 export default data;
