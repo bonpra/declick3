@@ -1,3 +1,4 @@
+/*eslint-env mocha */
 import {assert} from 'chai';
 import {parse} from 'acorn';
 import declickParser from '../src/parser';
@@ -7,7 +8,7 @@ describe('Given an instance of Interpreter', () => {
 
   let interpreter;
 
-  before(()=> {
+  beforeEach(()=> {
     interpreter = new Interpreter('');
   });
 

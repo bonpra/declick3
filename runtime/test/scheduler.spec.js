@@ -1,3 +1,4 @@
+/*eslint-env mocha */
 import {assert} from 'chai';
 import {parse} from 'acorn';
 import Interpreter from '../src/interpreter';
@@ -7,7 +8,7 @@ describe('When scheduer is initialized', () => {
   let interpreter = new Interpreter('');
   scheduler.initialize(interpreter);
 
-  before(()=> {
+  beforeEach(()=> {
     scheduler.clear();
   });
 
