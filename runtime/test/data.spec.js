@@ -58,7 +58,6 @@ describe('When data has created interpreter', () => {
   });
 
   it('should be able to add a class with its constructor to interpreter', () => {
-    data.reset();
     let result = false;
 
     let MyClass = class {
@@ -83,6 +82,94 @@ describe('When data has created interpreter', () => {
     interpreter.run();
 
     assert.equal(result, 'coucou');
+  });
+
+  it('should be able to retrieve a declared instance from interpreter', () => {
+    let result = false;
+    let MyClass = class {
+      setResult() {
+        result = this;
+      }
+    };
+
+    MyClass.prototype.exposedMethods = {
+      setResult:'exposedSetResult'
+    };
+
+    let myInstance = new MyClass();
+
+    data.addInstance(myInstance, 'testInstance');
+    let interpreter = data.createInterpreter();
+    let code = 'testInstance.exposedSetResult()';
+    let ast = parse(code);
+    interpreter.appendCode(ast);
+    interpreter.run();
+
+    assert.equal(data.toNativeData(result), myInstance);
+  });
+
+  it('should be able to retrieve an instance of a declared class from interpreter', () => {
+    let result = false;
+    let MyClass = class {
+      constructor(value) {
+        this.secretText = value;
+      }
+      setResult() {
+        result = this;
+      }
+      getActualResult() {
+        return this.secretText;
+      }
+    };
+
+    MyClass.prototype.exposedMethods = {
+      setResult:'exposedSetResult'
+    };
+
+    data.addClass(MyClass, 'ATestClass');
+    let interpreter = data.createInterpreter();
+    let code = `toto = new ATestClass('yes')
+    toto.exposedSetResult()`;
+    let ast = parse(code);
+    interpreter.appendCode(ast);
+    interpreter.run();
+    let retrievedInstance = data.toNativeData(result);
+    assert.equal(retrievedInstance.getActualResult(), 'yes');
+  });
+
+  it('should be able to inject an instance of a declared class into the interpreter', () => {
+    let result = false;
+    let MyClass = class {
+      constructor(value) {
+        this.secretValue = value;
+      }
+      setResult(value) {
+        result = value;
+      }
+      getSecretValue() {
+        return this.secretValue;
+      }
+    };
+
+    MyClass.prototype.exposedMethods = {
+      getSecretValue:'exposedGetSecretValue',
+      setResult:'exposedSetResult'
+    };
+
+    MyClass.prototype.className = 'aStringUsedToRetrieveTheClass';
+
+    data.addClass(MyClass, 'ATestClass');
+    let interpreter = data.createInterpreter();
+    let instance = new MyClass(53);
+    let interpreterInstance = data.toInterpreterData(instance);
+    interpreter.setProperty(interpreter.getGlobalScope(), 'injectedInstance', interpreterInstance);
+    let code = `a = injectedInstance.exposedGetSecretValue()
+    injectedInstance.exposedSetResult(a*3)`;
+    let ast = parse(code);
+    interpreter.appendCode(ast);
+    interpreter.run();
+    assert.equal(result, 53 * 3);
+
   });
 
 });

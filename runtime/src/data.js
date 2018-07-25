@@ -4,7 +4,7 @@ import {forIn} from 'lodash';
 
 //let _log = null;
 let _classes = {};
-let _exposedClasses = {};
+let _prototypes = {};
 let _instances = {};
 let _interpreter = null;
 let _stored = false;
@@ -49,14 +49,11 @@ let _toInterpreterData = function(interpreter, data) {
     return result;
   } else if (typeof data === 'object') {
     // Object
-    if (data.className != null && _exposedClasses[data.className]) {
+    if (data.className != null && _prototypes[data.className] != null) {
       // declick object: wrap it
-      let interpreterClass = _interpreter.getProperty(interpreter.getGlobaleScope(), _exposedClasses[data.className]);
-      if (interpreterClass != null) {
-        let result = interpreter.createObject(interpreterClass);
-        result.data = data;
-        return result;
-      }
+      let result = interpreter.createObject(_prototypes[data.className]);
+      result.data = data;
+      return result;
     }
     return interpreter.createObject(data);
   }
@@ -81,6 +78,10 @@ let _toInterpreterClass = function(interpreter, AClass) {
     forIn(AClass.prototype.exposedMethods, (exposedName, methodName) => {
       interpreter.setProperty(interpreterClass.properties.prototype, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, AClass.prototype[methodName])));
     });
+  }
+  // store class prototype to be able to create interpreter objects from native ones
+  if (AClass.prototype.className != null) {
+    _prototypes[AClass.prototype.className] = interpreterClass;
   }
   // 2nd constructor
   let constructor = function() {
@@ -127,9 +128,6 @@ let data = {
         });
         forIn(_classes, (aClass, name) => {
           _classes[name] = _toInterpreterClass(interpreter, aClass);
-          if (aClass.className != null) {
-            _exposedClasses[aClass.className] = name;
-          }
         });
         _stored = true;
       }
@@ -236,7 +234,7 @@ let data = {
 
   reset() {
     _classes = {};
-    _exposedClasses = {};
+    _prototypes = {};
     _instances = {};
     _interpreter = null;
     _stored = false;
