@@ -1,9 +1,11 @@
 import {assert} from 'chai';
-import declickParser from '../src/parser';
+import {parse} from 'acorn';
+import Interpreter from '../src/interpreter';
 import scheduler from '../src/scheduler';
 
 describe('When scheduer is initialized', () => {
-  /*let interpreter = */scheduler.initialize();
+  let interpreter = new Interpreter('');
+  scheduler.initialize(interpreter);
 
   before(()=> {
     scheduler.clear();
@@ -13,14 +15,14 @@ describe('When scheduer is initialized', () => {
 
     it('should give last value for a normal statement', () => {
       let code1 = 'a = 3';
-      let ast1 = declickParser.parse(code1);
+      let ast1 = parse(code1);
       scheduler.addStatements(ast1);
       assert.equal(scheduler.getLastValue().data, 3);
     });
 
     it('should give last value for a priority statement', () => {
       let code1 = 'a = 27';
-      let ast1 = declickParser.parse(code1);
+      let ast1 = parse(code1);
       scheduler.addPriorityStatements(ast1);
       assert.equal(scheduler.getLastValue().data, 27);
     });
@@ -36,7 +38,7 @@ describe('When scheduer is initialized', () => {
       }
       a = 3
       truc(a)`;
-      let ast1 = declickParser.parse(code1);
+      let ast1 = parse(code1);
       scheduler.addStatements(ast1);
       assert.equal(scheduler.getLastValue().data, 15);
     });
@@ -48,7 +50,7 @@ describe('When scheduer is initialized', () => {
       }
       a = 3
       truc(a)`;
-      let ast1 = declickParser.parse(code1);
+      let ast1 = parse(code1);
       scheduler.addStatements(ast1.body);
       assert.equal(scheduler.getLastValue().data, 17);
     });
@@ -56,8 +58,8 @@ describe('When scheduer is initialized', () => {
     it('should execute added statements in right order', () => {
       let code1 = 'a = 3';
       let code2 = 'a = 5';
-      let ast1 = declickParser.parse(code1);
-      let ast2 = declickParser.parse(code2);
+      let ast1 = parse(code1);
+      let ast2 = parse(code2);
       scheduler.addStatements(ast1);
       scheduler.addStatements(ast2);
       assert.equal(scheduler.getLastValue().data, 5);
@@ -66,8 +68,8 @@ describe('When scheduer is initialized', () => {
     it('should insert statements before previously added statements', () => {
       let code1 = 'a = 3';
       let code2 = 'a = 5';
-      let ast1 = declickParser.parse(code1);
-      let ast2 = declickParser.parse(code2);
+      let ast1 = parse(code1);
+      let ast2 = parse(code2);
       scheduler.suspend();
       scheduler.addStatements(ast1);
       scheduler.insertStatements(ast2.body);
@@ -80,8 +82,8 @@ describe('When scheduer is initialized', () => {
       let code2 = `
       a = 5
       b = 10`;
-      let ast1 = declickParser.parse(code1);
-      let ast2 = declickParser.parse(code2);
+      let ast1 = parse(code1);
+      let ast2 = parse(code2);
       scheduler.suspend();
       scheduler.addStatements(ast1);
       scheduler.addPriorityStatements(ast2);
@@ -92,8 +94,8 @@ describe('When scheduer is initialized', () => {
     it('should insert priority statements before previously added priority statements', () => {
       let code1 = 'a = 3';
       let code2 = 'a = 5';
-      let ast1 = declickParser.parse(code1);
-      let ast2 = declickParser.parse(code2);
+      let ast1 = parse(code1);
+      let ast2 = parse(code2);
       scheduler.suspend();
       scheduler.addPriorityStatements(ast1);
       scheduler.insertPriorityStatements(ast2);
@@ -107,7 +109,7 @@ describe('When scheduer is initialized', () => {
       let callback = () => {
         result = scheduler.getLastValue().data;
       };
-      let ast1 = declickParser.parse(code1);
+      let ast1 = parse(code1);
       scheduler.addStatements(ast1, null, callback);
       assert.equal(result, 142);
     });

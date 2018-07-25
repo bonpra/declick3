@@ -207,11 +207,10 @@ export default {
     }
   },
 
-  initialize(initFunction) {
-    _interpreter = new Interpreter('', initFunction);
+  initialize(interpreter) {
+    _interpreter = interpreter;
     _priorityInterpreter = new Interpreter('');
     _priorityInterpreter.setGlobalScope(_interpreter.getGlobalScope());
-    return _interpreter;
   },
 
   getLastValue() {

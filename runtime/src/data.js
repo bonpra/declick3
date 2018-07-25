@@ -1,11 +1,13 @@
+import Interpreter from './interpreter';
+import {forIn} from 'lodash';
 // Private properties
 
 //let _log = null;
 let _classes = {};
-let _translatedClasses = {};
+let _exposedClasses = {};
 let _instances = {};
-let _stored = {};
 let _interpreter = null;
+let stored = false;
 
 // Private methods
 
@@ -36,93 +38,73 @@ let _toNativeData = function(data) {
   return data;
 };
 
-let _toInterpreterData = function(data) {
+let _toInterpreterData = function(interpreter, data) {
   let result;
   if (data instanceof Array) {
     // Array
-    result = _interpreter.createObject(_interpreter.ARRAY);
+    result = interpreter.createObject(interpreter.ARRAY);
     for (let i = 0; i < data.length;i++) {
-      _interpreter.setProperty(result, i, _toInterpreterData(data[i]));
+      interpreter.setProperty(result, i, _toInterpreterData(interpreter, data[i]));
     }
     return result;
   } else if (typeof data === 'object') {
     // Object
-    if (data.className) {
+    if (data.className != null && _exposedClasses[data.className]) {
       // declick object: wrap it
-      if (_translatedClasses[data.className]) {
-        result = _interpreter.createObject(_getClass(_translatedClasses[data.className]));
+      let interpreterClass = _interpreter.getProperty(interpreter.getGlobaleScope(), _exposedClasses[data.className]);
+      if (interpreterClass != null) {
+        let result = interpreter.createObject(interpreterClass);
         result.data = data;
         return result;
       }
     }
-  } else {
-    // Primitive types
-    return _interpreter.createPrimitive(data);
+    return interpreter.createObject(data);
   }
-  return data;
+  // Primitive types
+  return interpreter.createPrimitive(data);
 };
 
-let _getClassMethodWrapper = function(className, methodName) {
+let _getMethodWrapper = function(interpreter, method) {
   return function() {
     // transform data from interpreter into actual data
-    let args = [];
-    for (let i = 0; i < arguments.length;i++) {
-      args.push(_toNativeData(arguments[i]));
-    }
-    return _toInterpreterData(_classes[className].prototype[methodName].apply(this.data, args));
+    let args = [...arguments].map((argument) => {
+      return _toNativeData(argument);
+    });
+    return _toInterpreterData(interpreter, method.apply(this.data, args));
   };
 };
 
-//TODO: store classes
-let _getClass = function(name) {
-  let parent = _interpreter.createObject(_interpreter.FUNCTION);
-  if (typeof _classes[name].prototype !== 'undefined' && typeof _classes[name].prototype.translatedMethods !== 'undefined') {
-    let translated = _classes[name].prototype.translatedMethods;
-    for (let methodName in translated) {
-      _interpreter.setProperty(parent.properties.prototype, translated[methodName], _interpreter.createNativeFunction(_getClassMethodWrapper(name, methodName)));
-    }
+let _toInterpreterClass = function(interpreter, aClass) {
+  // 1st prototype
+  let interpreterClass = interpreter.createObject(interpreter.FUNCTION);
+  if (aClass.prototype != null && aClass.prototype.exposedMethods != null) {
+    forIn(aClass.prototype.exposedMethods, (exposedName, methodName) => {
+      interpreter.setProperty(interpreterClass.properties.prototype, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, aClass.prototype[methodName])));
+    });
   }
-  return parent;
-};
-
-let _getInstanceMethodWrapper = function(className, methodName) {
-  return function() {
-    // transform data from interpreter into actual data
-    let args = [];
-    for (let i = 0 ; i < arguments.length ; i++) {
-      args.push(_toNativeData(arguments[i]));
-    }
-    return _toInterpreterData(_instances[className][methodName].apply(this.data, args));
+  // 2nd constructor
+  let constructor = function() {
+    let instance = _interpreter.createObject(interpreterClass);
+    let declickObject = Object.create(aClass);
+    let args = [...arguments].map((argument) => {
+      return _toNativeData(argument);
+    });
+    aClass.apply(declickObject, args);
+    instance.data = declickObject;
+    return instance;
   };
+  return _interpreter.createNativeFunction(constructor);
 };
 
-let _getInstance = function(name) {
-  let object = _interpreter.createObject(_interpreter.FUNCTION);
-  object.data = _instances[name];
-  if (typeof _instances[name].translatedMethods !== 'undefined') {
-    let translated = _instances[name].translatedMethods;
-    for (let methodName in translated) {
-      _interpreter.setProperty(object, translated[methodName], _interpreter.createNativeFunction(_getInstanceMethodWrapper(name, methodName)));
-    }
+let _toInterpreterInstance = function(interpreter, instance) {
+  let interpreterInstance = interpreter.createObject(interpreter.FUNCTION);
+  interpreterInstance.data = instance;
+  if (instance.exposedMethods != null) {
+    forIn(instance.exposedMethods, (exposedName, methodName) => {
+      interpreter.setProperty(interpreterInstance, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, instance[methodName])));
+    });
   }
-  return object;
-};
-
-// generate wrapper for translated methods
-let _getObject = function(name) {
-  let wrapper = function() {
-    let obj = _interpreter.createObject(_getClass(name));
-    let declickObj = Object.create(_classes[name].prototype);
-    // transform data from interpreter into actual data
-    let args = [];
-    for (let i = 0; i < arguments.length;i++) {
-      args.push(_getNativeData(arguments[i]));
-    }
-    _classes[name].apply(declickObj, args);
-    obj.data = declickObj;
-    return obj;
-  };
-  return _interpreter.createNativeFunction(wrapper);
+  return interpreterInstance;
 };
 
 /*let _logCommand = function(command) {
@@ -133,57 +115,51 @@ let _getObject = function(name) {
 
 let data = {
 
-  initialize(interpreter) {
+  createInterpreter() {
+    _interpreter = new Interpreter('', (interpreter, scope) => {
 
-    _interpreter = interpreter;
-
-    /*_interpreter = new Interpreter('', (interpreter, scope) => {
-      // #1 Declare translated Instances
-      for (let name in _instances) {
-        let object;
-        if (_stored[name]) {
-          // instance already created and stored
-          object = _stored[name];
-        } else {
-          object = _getInstance(name);
-          _stored[name] = object;
-        }
-        _interpreter.setProperty(scope, name, object, true);
+      // at first launch, create and store interpreter instances and classes
+      if (!stored) {
+        forIn(_instances, (instance, name) => {
+          _instances[name] = _toInterpreterInstance(interpreter, instance);
+        });
+        forIn(_classes, (aClass, name) => {
+          _classes[name] = _toInterpreterClass(interpreter, aClass);
+          if (aClass.className != null) {
+            _exposedClasses[aClass.className] = name;
+          }
+        });
+        stored = true;
       }
+
+      // #1 Declare instances
+      forIn(_instances, (instance, name) => {
+        interpreter.setProperty(scope, name, instance, {writable:false});
+      });
 
       // #2 Declare translated Classes
-      for (let name in _classes) {
-        let object;
-        if (_stored[name]) {
-          // instance already created and stored
-          object = _stored[name];
-        } else {
-          object = _getObject(name);
-          _stored[name] = object;
-        }
-        _interpreter.setProperty(scope, name, object, true);
-      }
-    });*/
+      forIn(_classes, (aClass, name) => {
+        interpreter.setProperty(scope, name, aClass, {writable:false});
+      });
 
+    });
+    return _interpreter;
   },
 
   toInterpreterData(data) {
-    return _toInterpreterData(data);
+    return _toInterpreterData(_interpreter, data);
   },
 
   toNativeData(data) {
     return _toNativeData(data);
   },
 
-  addClass(func, name) {
-    _classes[name] = func;
-    if (func.prototype.className) {
-      _translatedClasses[func.prototype.className] = name;
-    }
+  addClass(aClass, name, nativeName) {
+    _classes[name] = aClass;
   },
 
-  addInstance(func, name) {
-    _instances[name] = func;
+  addInstance(instance, name) {
+    _instances[name] = instance;
   },
 
   getClass(name) {
@@ -239,7 +215,7 @@ let data = {
   exposeProperty(reference, property, propertyName) {
     let scope = _interpreter.getScope();
     let wrapper = function() {
-      return _toInterpreterData(this.data[property]);
+      return _toInterpreterData(_interpreter, this.data[property]);
     };
     while (scope) {
       for (let name in scope.properties) {

@@ -10,7 +10,7 @@ export default class extends JSInterpreter {
   }
 
   // Modify Interpreter to throw exception when trying to redefine readonly property
-  // TODO: est-ce toujours nécessaire ?
+  // TODO: est-ce toujours nécessaire ? (scope.strict n'existe plus)
   setValueToScope(name, value) {
     var scope = this.getScope();
     var strict = scope.strict;
@@ -288,6 +288,7 @@ export default class extends JSInterpreter {
     return this.value;
   }
 
+  //TODO: voir si on ne peut pas utiliser plutôt takeStateSnapshot et restoreStateSnapshot
   reset(scope) {
     let emptyAST = parser.parse('');
     if (scope == null) {
