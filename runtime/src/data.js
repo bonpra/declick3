@@ -44,9 +44,9 @@ let _toInterpreterData = function(interpreter, data) {
   if (data instanceof Array) {
     // Array
     result = interpreter.createObject(interpreter.ARRAY);
-    for (let i = 0; i < data.length;i++) {
-      interpreter.setProperty(result, i, _toInterpreterData(interpreter, data[i]));
-    }
+    data.forEach((element, index) => {
+      interpreter.setProperty(result, index, _toInterpreterData(interpreter, element));
+    });
     return result;
   } else if (typeof data === 'object') {
     // Object
@@ -142,8 +142,8 @@ let data = {
       forIn(_classes, (aClass, name) => {
         interpreter.setProperty(scope, name, aClass, {writable:false});
       });
-
     });
+
     return _interpreter;
   },
 
@@ -155,7 +155,7 @@ let data = {
     return _toNativeData(data);
   },
 
-  addClass(aClass, name, nativeName) {
+  addClass(aClass, name) {
     _classes[name] = aClass;
   },
 
