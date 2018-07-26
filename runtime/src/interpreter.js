@@ -9,24 +9,27 @@ export default class extends JSInterpreter {
     this.setValue(this.createPrimitive(state.node.id.name), this.createFunction(state.node, this.getScope()));
   }
 
-  // Modify Interpreter to throw exception when trying to redefine readonly property
-  // TODO: est-ce toujours nécessaire ? (scope.strict n'existe plus)
+  // modify method to throw exception when trying to redefine a writable property
   setValueToScope(name, value) {
     var scope = this.getScope();
-    var strict = scope.strict;
     var nameStr = name.toString();
-    while (scope) {
-      if ((nameStr in scope.properties) || (!strict && !scope.parentScope)) {
-        if (!scope.notWritable[nameStr]) {
-          scope.properties[nameStr] = value;
-        } else {
-          this.throwException(this.REFERENCE_ERROR, nameStr + ' is already defined');
-        }
-        return;
+    while (scope && scope !== this.global) {
+      if (nameStr in scope.properties) {
+        scope.properties[nameStr] = value;
+        return undefined;
       }
       scope = scope.parentScope;
     }
+    // The root scope is also an object which has readonly properties and
+    // could also have setters.
+    if (scope === this.global) {
+      if (!scope.notWritable[name]) {
+        return this.setProperty(scope, nameStr, value);
+      }
+      this.throwException(this.TYPE_ERROR, 'Cannot assign to read only property \'' + name + '\' ');
+    }
     this.throwException(this.REFERENCE_ERROR, nameStr + ' is not defined');
+    return undefined;
   }
 
   // Modify Interpreter to not delete statements when looking for a try and to use catch

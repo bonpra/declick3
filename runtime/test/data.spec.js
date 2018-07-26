@@ -172,6 +172,26 @@ describe('When data has created interpreter', () => {
 
   });
 
+  it('it should prevent from redeclaring an declared instance', () => {
+    let MyClass = class {
+      constructor() {
+        this.exposedMethods = {
+          setResult:'exposedSetResult'
+        };
+      }
+      setResult() {
+      }
+    };
+    let myInstance = new MyClass();
+
+    data.addInstance(myInstance, 'test');
+    let interpreter = data.createInterpreter();
+    let code = 'test = 5';
+    let ast = parse(code);
+    interpreter.appendCode(ast);
+    assert.throw(interpreter.run.bind(interpreter), TypeError);
+  });
+
   describe('When interpreter is reset', () => {
 
     beforeEach(()=> {
@@ -248,5 +268,9 @@ describe('When data has created interpreter', () => {
       interpreter.run();
       assert.ok(result);
     });
+  });
+
+  after(() => {
+    data.reset();
   });
 });
