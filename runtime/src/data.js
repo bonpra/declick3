@@ -4,7 +4,8 @@ import {forIn} from 'lodash';
 
 //let _log = null;
 let _classes = {};
-let _prototypes = {};
+// classes without constructor
+let _classStructures = {};
 let _instances = {};
 let _interpreter = null;
 let _stored = false;
@@ -49,9 +50,9 @@ let _toInterpreterData = function(interpreter, data) {
     return result;
   } else if (typeof data === 'object') {
     // Object
-    if (data.className != null && _prototypes[data.className] != null) {
+    if (data.className != null && _classStructures[data.className] != null) {
       // declick object: wrap it
-      let result = interpreter.createObject(_prototypes[data.className]);
+      let result = interpreter.createObject(_classStructures[data.className]);
       result.data = data;
       return result;
     }
@@ -81,7 +82,7 @@ let _toInterpreterClass = function(interpreter, AClass) {
   }
   // store class prototype to be able to create interpreter objects from native ones
   if (AClass.prototype.className != null) {
-    _prototypes[AClass.prototype.className] = interpreterClass;
+    _classStructures[AClass.prototype.className] = interpreterClass;
   }
   // 2nd constructor
   let constructor = function() {
@@ -234,7 +235,7 @@ let data = {
 
   reset() {
     _classes = {};
-    _prototypes = {};
+    _classStructures = {};
     _instances = {};
     _interpreter = null;
     _stored = false;
