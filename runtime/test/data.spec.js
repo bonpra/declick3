@@ -30,7 +30,7 @@ describe('When data has created interpreter', () => {
     interpreter.appendCode(ast);
     interpreter.run();
 
-    assert.equal(result, true);
+    assert.ok(result);
   });
 
   it('should be able to add a class to interpreter', () => {
@@ -54,7 +54,7 @@ describe('When data has created interpreter', () => {
     interpreter.appendCode(ast);
     interpreter.run();
 
-    assert.equal(result, true);
+    assert.ok(result);
   });
 
   it('should be able to add a class with its constructor to interpreter', () => {
@@ -172,4 +172,81 @@ describe('When data has created interpreter', () => {
 
   });
 
+  describe('When interpreter is reset', () => {
+
+    beforeEach(()=> {
+      data.reset();
+    });
+
+    it('should clear reference to a previously created object', () => {
+
+      let MyClass = class {
+        setResult() {
+        }
+      };
+
+      MyClass.prototype.exposedMethods = {
+        setResult:'exposedSetResult'
+      };
+
+      data.addClass(MyClass, 'Test');
+      let interpreter = data.createInterpreter();
+      let code = 'toto = new Test()';
+      let ast = parse(code);
+      interpreter.appendCode(ast);
+      interpreter.run();
+      interpreter.reset();
+      code = 'toto.exposedSetResult()';
+      ast = parse(code);
+      interpreter.appendCode(ast);
+      assert.throws(interpreter.run.bind(interpreter), ReferenceError);
+    });
+
+    it('should be able to create an instance of a class declared previously', () => {
+      let result = false;
+
+      let MyClass = class {
+        setResult() {
+          result = true;
+        }
+      };
+
+      MyClass.prototype.exposedMethods = {
+        setResult:'exposedSetResult'
+      };
+
+      data.addClass(MyClass, 'Test');
+      let interpreter = data.createInterpreter();
+      interpreter.reset();
+      let code = `toto = new Test()
+      toto.exposedSetResult()`;
+      let ast = parse(code);
+      interpreter.appendCode(ast);
+      interpreter.run();
+      assert.ok(result);
+    });
+
+    it('should be able to call an instance declared previously', () => {
+      let result = false;
+      let MyClass = class {
+        constructor() {
+          this.exposedMethods = {
+            setResult:'exposedSetResult'
+          };
+        }
+        setResult() {
+          result = true;
+        }
+      };
+      let myInstance = new MyClass();
+      data.addInstance(myInstance, 'test');
+      let interpreter = data.createInterpreter();
+      interpreter.reset();
+      let code = 'test.exposedSetResult()';
+      let ast = parse(code);
+      interpreter.appendCode(ast);
+      interpreter.run();
+      assert.ok(result);
+    });
+  });
 });
