@@ -1,7 +1,7 @@
 import _data from './data';
 import _scheduler from './scheduler';
 import _parser from './parser';
-import {forIn} from 'lodash';
+import forIn from 'lodash.forin';
 
 let _interpreter = null;
 

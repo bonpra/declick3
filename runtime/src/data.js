@@ -1,5 +1,5 @@
 import Interpreter from './interpreter';
-import {forIn} from 'lodash';
+import forIn from 'lodash.forin';
 // Private properties
 
 //let _log = null;
