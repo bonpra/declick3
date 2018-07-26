@@ -1,6 +1,5 @@
 import Interpreter from './interpreter';
 import data from './data';
-import {isArray} from 'lodash';
 
 // TODO: ajouter error
 import DeclickError from './error';
@@ -162,7 +161,7 @@ export default {
   // STATEMENTS MANAGEMENT
 
   addStatements(statements, parameters, callback) {
-    if (!isArray(statements)) {
+    if (!Array.isArray(statements)) {
       statements = statements.body;
     }
     _appendStatements(_interpreter, statements, parameters, callback);
@@ -179,7 +178,7 @@ export default {
 
   addPriorityStatements(statements, parameters, callback) {
     if (_priorityStatementsAllowed) {
-      if (!isArray(statements)) {
+      if (!Array.isArray(statements)) {
         statements = statements.body;
       }
       _appendStatements(_priorityInterpreter, statements, parameters, callback);
