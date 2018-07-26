@@ -18,7 +18,7 @@ if (env === 'build') {
 
 const config = {
   mode: mode,
-  entry: __dirname + '/src/runtime.js',
+  entry: __dirname + '/src/main.js',
   devtool: 'source-map',
   output: {
     path: __dirname + '/lib',
