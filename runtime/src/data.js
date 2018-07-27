@@ -1,5 +1,4 @@
 import Interpreter from './interpreter';
-import forIn from 'lodash.forin';
 // Private properties
 
 //let _log = null;
@@ -9,6 +8,7 @@ let _classStructures = {};
 let _instances = {};
 let _interpreter = null;
 let _stored = false;
+let _createdObjects = [];
 
 // Private methods
 
@@ -76,9 +76,9 @@ let _toInterpreterClass = function(interpreter, AClass) {
   // 1st prototype
   let interpreterClass = interpreter.createObject(interpreter.FUNCTION);
   if (AClass.prototype != null && AClass.prototype.exposedMethods != null) {
-    forIn(AClass.prototype.exposedMethods, (exposedName, methodName) => {
-      interpreter.setProperty(interpreterClass.properties.prototype, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, AClass.prototype[methodName])));
-    });
+    for (let name in AClass.prototype.exposedMethods) {
+      interpreter.setProperty(interpreterClass.properties.prototype, AClass.prototype.exposedMethods[name], interpreter.createNativeFunction(_getMethodWrapper(interpreter, AClass.prototype[name])));
+    }
   }
   // store class prototype to be able to create interpreter objects from native ones
   if (AClass.prototype.className != null) {
@@ -95,6 +95,7 @@ let _toInterpreterClass = function(interpreter, AClass) {
     //AClass.apply(declickObject, args);
     let declickObject = new AClass(...args);
     instance.data = declickObject;
+    _createdObjects.push(declickObject);
     return instance;
   };
   return interpreter.createNativeFunction(constructor);
@@ -104,9 +105,9 @@ let _toInterpreterInstance = function(interpreter, instance) {
   let interpreterInstance = interpreter.createObject(interpreter.FUNCTION);
   interpreterInstance.data = instance;
   if (instance.exposedMethods != null) {
-    forIn(instance.exposedMethods, (exposedName, methodName) => {
-      interpreter.setProperty(interpreterInstance, exposedName, interpreter.createNativeFunction(_getMethodWrapper(interpreter, instance[methodName])));
-    });
+    for (let name in instance.exposedMethods) {
+      interpreter.setProperty(interpreterInstance, instance.exposedMethods[name], interpreter.createNativeFunction(_getMethodWrapper(interpreter, instance[name])));
+    }
   }
   return interpreterInstance;
 };
@@ -122,26 +123,28 @@ let data = {
   createInterpreter() {
     _interpreter = new Interpreter('', (interpreter, scope) => {
 
+      let name;
+
       // at first launch, create and store interpreter instances and classes
       if (!_stored) {
-        forIn(_instances, (instance, name) => {
-          _instances[name] = _toInterpreterInstance(interpreter, instance);
-        });
-        forIn(_classes, (aClass, name) => {
-          _classes[name] = _toInterpreterClass(interpreter, aClass);
-        });
+        for (name in _instances) {
+          _instances[name] = _toInterpreterInstance(interpreter, _instances[name]);
+        }
+        for (name in _classes) {
+          _classes[name] = _toInterpreterClass(interpreter, _classes[name]);
+        }
         _stored = true;
       }
 
       // #1 Declare instances
-      forIn(_instances, (instance, name) => {
-        interpreter.setProperty(scope, name, instance, {writable:false});
-      });
+      for (name in _instances) {
+        interpreter.setProperty(scope, name, _instances[name], {writable:false});
+      }
 
       // #2 Declare classes
-      forIn(_classes, (aClass, name) => {
-        interpreter.setProperty(scope, name, aClass, {writable:false});
-      });
+      for (name in _classes) {
+        interpreter.setProperty(scope, name, _classes[name], {writable:false});
+      }
     });
 
     return _interpreter;
@@ -233,10 +236,20 @@ let data = {
     return false;
   },
 
+  clear() {
+    while (_createdObjects.length > 0) {
+      _createdObjects[0].deleteObject();
+    }
+    for (let name in _instances) {
+      _instances[name].clear();
+    }
+  },
+
   reset() {
     _classes = {};
     _classStructures = {};
     _instances = {};
+    _createdObjects = {};
     _interpreter = null;
     _stored = false;
   }

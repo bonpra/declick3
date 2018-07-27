@@ -39,6 +39,7 @@ export default {
   },
 
   clear() {
+    _data.clear();
     _scheduler.clear();
   },
 
