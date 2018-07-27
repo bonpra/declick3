@@ -238,10 +238,16 @@ let data = {
 
   clear() {
     while (_createdObjects.length > 0) {
-      _createdObjects[0].deleteObject();
+      if (_createdObjects[0].deleteObject != null) {
+        _createdObjects[0].deleteObject();
+      } else {
+        _createdObjects.shift();
+      }
     }
     for (let name in _instances) {
-      _instances[name].clear();
+      if (_instances[name].clear != null) {
+        _instances[name].clear();
+      }
     }
   },
 
@@ -249,7 +255,7 @@ let data = {
     _classes = {};
     _classStructures = {};
     _instances = {};
-    _createdObjects = {};
+    _createdObjects = [];
     _interpreter = null;
     _stored = false;
   }
