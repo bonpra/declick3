@@ -1,7 +1,6 @@
 import _data from './data';
 import _scheduler from './scheduler';
 import _parser from './parser';
-import forIn from 'lodash.forin';
 
 let _interpreter = null;
 
@@ -9,13 +8,13 @@ export default {
 
   initialize(classes, instances) {
 
-    forIn(classes, (aClass, name) => {
-      _data.addClass(aClass, name);
-    });
+    for (let name in classes) {
+      _data.addClass(classes[name], name);
+    }
 
-    forIn(instances, (anInstance, name) => {
-      _data.addInstance(anInstance, name);
-    });
+    for (let name in instances) {
+      _data.addInstance(instances[name], name);
+    }
 
     _interpreter = _data.createInterpreter();
 
