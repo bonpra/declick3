@@ -47,7 +47,6 @@
   },
   "dependencies": {
     "acorn": "^5.7.1",
-    "js-interpreter": "^1.4.6",
-    "lodash.forin": "^4.4.0"
+    "js-interpreter": "^1.4.6"
   }
 }
