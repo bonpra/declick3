@@ -1,0 +1,30 @@
+{
+  "fr": {
+    "name":"declick",
+    "methods":{
+        "_write":{"translated":"\u00e9crire","displayed":"\u00e9crire(\"texte\")"},
+        "_alert":{"translated":"alerter","displayed":"alerter(\"texte\")"},
+        "_pause":{"translated":"suspendre","displayed":"suspendre()"},
+        "_unpause":{"translated":"reprendre","displayed":"reprendre()"},
+        "_loadScript":{"translated":"chargerProgramme","displayed":"chargerProgramme(\"programme\")"},
+        "_ask":{"translated":"demander","displayed":"demander(\"question\")"},
+        "_init":{"translated":"initialiser","displayed":"initialiser()"},
+        "_clearScreen":{"translated":"effacerEcran","displayed":false},
+        "_interrupt":{"translated":"interrompre","displayed":"interrompre()"},
+        "_wait":{"translated":"attendre","displayed":"attendre(1000)"},
+        "_displayGrid":{"translated":"afficherGrille","displayed":"afficherGrille()"},
+        "_maskGrid":{"translated":"masquerGrille","displayed":"masquerGrille()"},
+        "delay":{"translated": "délayer", "displayed": "délayer(fonction, durée)"},
+        "loop":{"translated": "boucler", "displayed": "boucler(fonction)"}
+    },
+    "messages": {
+      "script unreachable":"Programme « {0} » introuvable"
+    }
+  },
+  "en": {
+    "name":"declick",
+    "messages":{
+      "script unreachable":"Could not find program '{0}'"
+    }
+  }
+}
